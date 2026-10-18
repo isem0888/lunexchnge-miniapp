@@ -85,7 +85,6 @@ nav button[aria-selected="true"]{color:var(--accent);font-weight:650}
 </style>
 </head>
 <body>
-<div class="notice"><b>Оценка интерфейса.</b> Ставки и начисления не получены из реального пула и не являются предложением или обещанием доходности. Приложение пока не принимает и не переводит средства.</div>
 <h1>Yield Desk</h1><div class="card wallet" aria-live="polite"><div class="wallet-head"><b>Кошелек</b><span class="small muted" id="walletStatus">Не подключен</span></div><div class="wallet-actions" id="walletActions"><button type="button" class="wallet-btn" data-wallet="metamask">MetaMask</button><button type="button" class="wallet-btn" data-wallet="trust">Trust Wallet</button></div><button type="button" class="btn ghost" id="walletDisconnect" hidden>Отключить</button><div class="small muted" id="walletHint">В Telegram Mini App откройте приложение во встроенном браузере выбранного кошелька.</div></div>
 <div class="small muted" id="clock">пример интерфейса</div>
 
@@ -184,7 +183,7 @@ function renderDep(){
   document.getElementById("rates").innerHTML='<thead><tr><th>Срок</th><th>Ставка</th><th>Выплата</th></tr></thead><tbody>'+
     P.rates.map(function(r){ return '<tr class="row" data-term="'+r[0]+'" aria-selected="'+(r[0]===term)+'"><td><div><b>'+r[0]+' '+dayWord(r[0])+'</b></div></td>'+
       '<td><div class="num apr">'+r[1]+'%'+(r[2]?'<br><span class="tag">'+esc(r[2])+'</span>':'')+'</div></td><td><div class="muted small">'+payoutLabel(r[0])+'</div></td></tr>'; }).join("")+'</tbody>';
-  document.getElementById("poolNote").textContent=P.note+" Значения ставок приведены для оценки интерфейса и не связаны с реальным пулом.";
+  document.getElementById("poolNote").textContent=P.note+" Расчёт ориентировочный; реальных начислений сейчас нет.";
   var sel=document.getElementById("term");
   sel.innerHTML=P.rates.map(function(r){ return '<option value="'+r[0]+'">'+r[0]+' '+dayWord(r[0])+' — '+r[1]+'%</option>'; }).join("");
   sel.value=String(term);
