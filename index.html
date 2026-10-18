@@ -29,7 +29,7 @@
 html{min-height:100%}
 body{min-height:100vh;min-height:100dvh;height:auto;margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--sans);-webkit-text-size-adjust:100%;overflow-x:hidden;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-top:0;padding-bottom:calc(300px + max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px)))}
+  padding-top:0;padding-bottom:calc(76px + max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px)))}
 button,input,select{font:inherit;color:inherit}
 .notice{position:sticky;top:0;z-index:6;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));
   padding:max(8px,env(safe-area-inset-top,0px)) 16px 8px;background:var(--notice-bg);color:var(--notice);font-size:12.5px;line-height:1.35}
@@ -75,7 +75,7 @@ h2{font-size:13px;margin:22px 0 8px;font-weight:600;text-transform:uppercase;let
 .del{background:none;border:0;color:var(--bad);cursor:pointer;padding:6px 0;font-size:12.5px}
 .empty{padding:22px 8px;text-align:center;color:var(--hint)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(124px + max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px)));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13px;z-index:20;max-width:calc(100% - 32px)}
-#tab-dep{padding-bottom:300px}
+.dash-card{padding:8px 10px}.dash-card .grid3{gap:6px;margin-top:6px!important}.dash-card .kpi{padding:6px 8px}.dash-card .kpi .t{font-size:10.5px;letter-spacing:.02em}.dash-card .kpi .s{font-size:10.5px}
 nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(2,1fr);background:var(--card);border-top:1px solid var(--line);
   padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px));z-index:5}
 nav button{background:none;border:0;padding:8px 2px;font-size:13px;color:var(--hint);cursor:pointer;border-radius:8px;min-height:44px}
@@ -204,7 +204,7 @@ function renderDash(){
   Object.keys(POOLS).forEach(function(k){
     var P=POOLS[k], list=S.pos.filter(function(x){return x.pool===k;}), inv=0, acc=0, day=0, act=0;
     list.forEach(function(x){ var s=posState(x); inv+=x.amt; acc+=s.accrued; if(!s.done){ day+=s.daily; act++; } });
-    out.push('<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(P.name)+'</b><span class="small muted">активных: '+act+'</span></div>'+
+    out.push('<div class="card dash-card"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(P.name)+'</b><span class="small muted">активных: '+act+'</span></div>'+
       '<div class="grid3" style="margin-top:8px">'+
       '<div class="kpi"><div class="t">Вложено</div><b class="num">'+fmt(inv,P.dec)+'</b><div class="s">'+esc(P.unit)+'</div></div>'+
       '<div class="kpi"><div class="t">Начислено</div><b class="num" style="color:var(--good)">+'+fmt(acc,P.dec)+'</b><div class="s">'+esc(P.unit)+'</div></div>'+
