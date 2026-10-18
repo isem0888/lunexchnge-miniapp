@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Yield Desk</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Экраны Earn и Позиции. Значения ставок приведены для оценки интерфейса. */
+:root{
+  --bg:#f3f6f6; --card:#ffffff; --fg:#13191c; --hint:#66747b; --line:#dde5e8;
+  --accent:#0f7b6c; --accent-fg:#ffffff; --accent-soft:#e3f3f0;
+  --notice:#8a5a00; --notice-bg:#fff2d6;
+  --good:#0f7b6c; --bad:#c0392b;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101417; --card:#182025; --fg:#e8eef0; --hint:#8d9aa1; --line:#26323a;
+  --accent:#3cc3ad; --accent-fg:#06201b; --accent-soft:#12302b;
+  --notice:#f0bd5a; --notice-bg:#33280f; --good:#3cc3ad; --bad:#ef7b6e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101417; --card:#182025; --fg:#e8eef0; --hint:#8d9aa1; --line:#26323a;
+  --accent:#3cc3ad; --accent-fg:#06201b; --accent-soft:#12302b;
+  --notice:#f0bd5a; --notice-bg:#33280f; --good:#3cc3ad; --bad:#ef7b6e; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--sans);-webkit-text-size-adjust:100%;overflow-x:hidden;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:0;padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+button,input,select{font:inherit;color:inherit}
+.notice{position:sticky;top:0;z-index:6;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));
+  padding:max(8px,env(safe-area-inset-top,0px)) 16px 8px;background:var(--notice-bg);color:var(--notice);font-size:12.5px;line-height:1.35}
+.notice b{letter-spacing:.06em}
+h1{font-size:19px;margin:14px 0 2px;font-weight:650;letter-spacing:-.01em}
+h2{font-size:13px;margin:22px 0 8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--hint)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--hint)} .small{font-size:12.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stack{display:flex;flex-direction:column;gap:8px}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.seg button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 4px;cursor:pointer;min-height:44px;font-size:13.5px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+.rates{width:100%;border-collapse:collapse}
+.rates th{font-size:11.5px;font-weight:500;color:var(--hint);text-align:left;padding:0 6px 6px 0;text-transform:uppercase;letter-spacing:.05em}
+.rates td{padding:0;border-top:1px solid var(--line)}
+.rates tr.row{cursor:pointer}
+.rates tr.row[aria-selected="true"] td{background:var(--accent-soft)}
+.rates td>div{padding:10px 6px 10px 0}
+.rates td:first-child>div{padding-left:8px}
+.apr{font-size:19px;font-weight:650;color:var(--good)}
+.tag{display:inline-block;margin-top:4px;font-size:10.5px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-family:var(--sans);letter-spacing:.02em}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;min-width:0}
+.field label{font-size:12.5px;color:var(--hint)}
+.field input,.field select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+.field input:focus,.field select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.result{background:var(--accent-soft);border-radius:12px;padding:12px 14px}
+.result .big{font-size:24px;font-weight:700;color:var(--good)}
+.result .row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px}
+.btn{width:100%;border:0;background:var(--accent);color:var(--accent-fg);border-radius:10px;padding:12px;font-weight:600;cursor:pointer;min-height:46px;margin-top:10px}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line);margin-top:8px;min-height:40px;padding:8px}.wallet{margin-top:12px}.wallet-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.wallet-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.wallet-btn{min-height:42px;border:1px solid var(--line);background:var(--bg);border-radius:10px;cursor:pointer}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 10px;min-width:0}
+.kpi .t{font-size:11.5px;color:var(--hint);text-transform:uppercase;letter-spacing:.05em}
+.kpi b{display:block;font-size:15px;margin-top:2px;overflow-wrap:anywhere}
+.kpi .s{font-size:11.5px;color:var(--hint)}
+.bar{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin:8px 0 4px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.pos .head{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.pos .head b{overflow-wrap:anywhere}
+.pos .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;margin-top:8px;font-size:13px}
+.pos .grid span{color:var(--hint);display:block;font-size:11.5px}
+.del{background:none;border:0;color:var(--bad);cursor:pointer;padding:6px 0;font-size:12.5px}
+.empty{padding:22px 8px;text-align:center;color:var(--hint)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13px;z-index:20;max-width:calc(100% - 32px)}
+nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(2,1fr);background:var(--card);border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px));z-index:5}
+nav button{background:none;border:0;padding:8px 2px;font-size:13px;color:var(--hint);cursor:pointer;border-radius:8px;min-height:44px}
+nav button[aria-selected="true"]{color:var(--accent);font-weight:650}
+.scroll{overflow-x:auto}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="notice"><b>Оценка интерфейса.</b> Ставки и начисления не получены из реального пула и не являются предложением или обещанием доходности. Приложение пока не принимает и не переводит средства.</div>
+<h1>Yield Desk</h1><div class="card wallet" aria-live="polite"><div class="wallet-head"><b>Кошелек</b><span class="small muted" id="walletStatus">Не подключен</span></div><div class="wallet-actions" id="walletActions"><button type="button" class="wallet-btn" data-wallet="metamask">MetaMask</button><button type="button" class="wallet-btn" data-wallet="trust">Trust Wallet</button></div><button type="button" class="btn ghost" id="walletDisconnect" hidden>Отключить</button><div class="small muted" id="walletHint">В Telegram Mini App откройте приложение во встроенном браузере выбранного кошелька.</div></div>
+<div class="small muted" id="clock">пример интерфейса</div>
+
+<main>
+  <section id="tab-dep">
+    <h2>Выберите пул</h2>
+    <div class="seg" id="poolSeg">
+      <button type="button" data-pool="stable" aria-pressed="true">Stablecoin</button>
+      <button type="button" data-pool="eth" aria-pressed="false">Ethereum</button>
+      <button type="button" data-pool="btc" aria-pressed="false">Bitcoin</button>
+    </div>
+
+    <h2 id="ratesTitle">Ставки для оценки</h2>
+    <div class="card scroll"><table class="rates" id="rates"></table></div>
+    <p class="small muted" id="poolNote"></p>
+
+    <h2>Калькулятор</h2>
+    <div class="card">
+      <div class="field"><label for="term">Срок</label><select id="term"></select></div>
+      <div class="field"><label for="amt" id="amtLbl">Сумма</label><input id="amt" inputmode="decimal"></div>
+      <div class="result" id="result"></div>
+      <button class="btn" type="button" id="start">Продолжить</button>
+    </div>
+
+    <h2>Текущее состояние</h2>
+    <div id="dash" class="stack"></div>
+  </section>
+
+  <section id="tab-pos" hidden>
+    <h2>Позиции</h2>
+    <div class="stack" id="posList"></div>
+  </section>
+</main>
+
+<nav role="tablist" aria-label="Разделы">
+  <button role="tab" data-tab="dep" aria-selected="true">Earn</button>
+  <button role="tab" data-tab="pos" aria-selected="false">Позиции</button>
+</nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+var tg=window.Telegram&&window.Telegram.WebApp;
+try{
+  if(tg){
+    tg.ready();
+    tg.expand();
+    var applyTelegramTheme=function(){
+      var dark=tg.colorScheme==="dark";
+      document.documentElement.setAttribute("data-theme",dark?"dark":"light");
+      if(tg.setHeaderColor) tg.setHeaderColor(dark?"#101417":"#f3f6f6");
+      if(tg.setBackgroundColor) tg.setBackgroundColor(dark?"#101417":"#f3f6f6");
+    };
+    applyTelegramTheme();
+    if(tg.onEvent) tg.onEvent("themeChanged",applyTelegramTheme);
+  }
+}catch(e){}
+
+/* условные ставки; в макете это константы, источника у них нет */
+var POOLS={
+  stable:{name:"Stablecoin Pool",unit:"USDT/USDC",dec:2,note:"Пул принимает USDT и USDC.",
+    rates:[[1,18],[7,19.5],[30,24,"Самый популярный"],[60,25.5],[90,26.5,"Самый крупный средний вклад"],[180,28],[360,29.5,"Максимальная ставка"]]},
+  eth:{name:"Ethereum Pool",unit:"ETH",dec:6,note:"Пул принимает ETH.",
+    rates:[[1,14],[7,15],[30,16.5],[60,18],[90,19,"Самый популярный"],[180,20],[360,21.5,"Максимальная ставка"]]},
+  btc:{name:"Bitcoin Pool",unit:"BTC",dec:8,note:"Пул принимает BTC.",
+    rates:[[1,14],[7,15],[30,16.5],[60,18],[90,19],[180,20],[360,21.5,"Максимальная ставка"]]}
+};
+var DAY=864e5, KEY="yd.positions.v3";
+function payoutLabel(d){ return d===1?"Ежедневно":"Раз в "+d+" "+dayWord(d); }
+var pool="stable", term=30, amtTouched={}, S=load();
+function load(){
+  try{ var j=JSON.parse(localStorage.getItem(KEY)||"null"); if(j&&j.pos) return j; }catch(e){}
+  return {pos:[],next:1};
+}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+function num(v){ v=parseFloat(String(v).replace(/\s/g,"").replace(",",".")); return isNaN(v)?0:v; }
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function fmt(x,d){ return x.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function dayWord(n){ var m=n%10,h=n%100; return (m===1&&h!==11)?"день":(m>=2&&m<=4&&(h<12||h>14))?"дня":"дней"; }
+function rateOf(p,d){ var r=POOLS[p].rates.filter(function(x){return x[0]===d;})[0]; return r?r[1]:0; }
+function defAmt(p){ return p==="stable"?10000:p==="eth"?10:0.25; }
+
+/* расчёт: простой процент, начисление по дням, выплата раз в срок */
+function calc(amt,apr,days){ var daily=amt*apr/100/365; return {daily:daily,profit:daily*days,total:amt+daily*days}; }
+function posState(x){
+  var el=Math.max(0,Math.min(x.days,Math.floor((Date.now()-x.start)/DAY)));
+  var c=calc(x.amt,x.apr,x.days);
+  return {el:el,left:x.days-el,accrued:c.daily*el,daily:c.daily,total:c.total,profit:c.profit,done:el>=x.days};
+}
+
+function renderDep(){
+  var P=POOLS[pool];
+  document.querySelectorAll("#poolSeg button").forEach(function(b){ b.setAttribute("aria-pressed",String(b.getAttribute("data-pool")===pool)); });
+  document.getElementById("ratesTitle").textContent=P.name+": ставки для оценки";
+  document.getElementById("rates").innerHTML='<thead><tr><th>Срок</th><th>Ставка</th><th>Выплата</th></tr></thead><tbody>'+
+    P.rates.map(function(r){ return '<tr class="row" data-term="'+r[0]+'" aria-selected="'+(r[0]===term)+'"><td><div><b>'+r[0]+' '+dayWord(r[0])+'</b></div></td>'+
+      '<td><div class="num apr">'+r[1]+'%'+(r[2]?'<br><span class="tag">'+esc(r[2])+'</span>':'')+'</div></td><td><div class="muted small">'+payoutLabel(r[0])+'</div></td></tr>'; }).join("")+'</tbody>';
+  document.getElementById("poolNote").textContent=P.note+" Значения ставок приведены для оценки интерфейса и не связаны с реальным пулом.";
+  var sel=document.getElementById("term");
+  sel.innerHTML=P.rates.map(function(r){ return '<option value="'+r[0]+'">'+r[0]+' '+dayWord(r[0])+' — '+r[1]+'%</option>'; }).join("");
+  sel.value=String(term);
+  var amtEl=document.getElementById("amt");
+  document.getElementById("amtLbl").textContent="Сумма, "+P.unit;
+  if(!amtTouched[pool]&&document.activeElement!==amtEl) amtEl.value=defAmt(pool);
+  var amt=num(amtEl.value), apr=rateOf(pool,term), c=calc(amt,apr,term);
+  document.getElementById("result").innerHTML=
+    '<div class="small muted">Расчетная прибыль за срок</div><div class="big num">+'+fmt(c.profit,P.dec)+' '+esc(P.unit)+'</div>'+
+    '<div class="small muted num">≈ '+fmt(c.total,P.dec)+' '+esc(P.unit)+' вместе с суммой вклада</div>'+
+    '<div class="row"><span class="muted small">'+(term===1?'Выплата ежедневно':'Выплата раз в '+term+' '+dayWord(term))+'</span><b class="num">+'+fmt(term===1?c.daily:c.profit,P.dec)+' '+esc(P.unit)+'</b></div>'+
+    '<div class="row"><span class="muted small">Начисляется в день</span><b class="num">+'+fmt(c.daily,P.dec)+' '+esc(P.unit)+'</b></div>';
+  renderDash();
+}
+function renderDash(){
+  var out=[];
+  Object.keys(POOLS).forEach(function(k){
+    var P=POOLS[k], list=S.pos.filter(function(x){return x.pool===k;}), inv=0, acc=0, day=0, act=0;
+    list.forEach(function(x){ var s=posState(x); inv+=x.amt; acc+=s.accrued; if(!s.done){ day+=s.daily; act++; } });
+    out.push('<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(P.name)+'</b><span class="small muted">активных: '+act+'</span></div>'+
+      '<div class="grid3" style="margin-top:8px">'+
+      '<div class="kpi"><div class="t">Вложено</div><b class="num">'+fmt(inv,P.dec)+'</b><div class="s">'+esc(P.unit)+'</div></div>'+
+      '<div class="kpi"><div class="t">Начислено</div><b class="num" style="color:var(--good)">+'+fmt(acc,P.dec)+'</b><div class="s">'+esc(P.unit)+'</div></div>'+
+      '<div class="kpi"><div class="t">Начисл./день</div><b class="num">+'+fmt(day,P.dec)+'</b><div class="s">'+esc(P.unit)+'</div></div></div></div>');
+  });
+  document.getElementById("dash").innerHTML=out.join("");
+}
+function renderPos(){
+  var el=document.getElementById("posList");
+  if(!S.pos.length){ el.innerHTML='<div class="card empty">Пока нет позиций.</div>'; return; }
+  el.innerHTML=S.pos.slice().reverse().map(function(x){
+    var P=POOLS[x.pool], s=posState(x), pc=Math.round(s.el/x.days*100);
+    return '<div class="card pos"><div class="head"><b>'+esc(P.name)+'</b><span class="num apr" style="font-size:17px">'+x.apr+'%</span></div>'+
+      '<div class="small muted">'+x.days+' '+dayWord(x.days)+' · выплата: '+payoutLabel(x.days).toLowerCase()+' · с '+new Date(x.start).toLocaleDateString("ru-RU")+'</div>'+
+      '<div class="bar"><i style="width:'+pc+'%"></i></div>'+
+      '<div class="small muted">'+(s.done?'Срок завершён':'Прошло '+s.el+' из '+x.days+' дн., осталось '+s.left)+'</div>'+
+      '<div class="grid"><div><span>Вложено</span><b class="num">'+fmt(x.amt,P.dec)+' '+esc(P.unit)+'</b></div>'+
+      '<div><span>Начислено (к выплате)</span><b class="num" style="color:var(--good)">+'+fmt(s.accrued,P.dec)+'</b></div>'+
+      '<div><span>Начисл./день</span><b class="num">+'+fmt(s.daily,P.dec)+'</b></div>'+
+      '<div><span>К концу срока</span><b class="num">'+fmt(s.total,P.dec)+'</b></div></div>'+
+      '<button class="del" type="button" data-del="'+x.id+'">Удалить позицию</button></div>';
+  }).join("");
+}
+function toast(t){ var e=document.getElementById("toast"); e.textContent=t; e.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(function(){ e.hidden=true; },2400); }
+function render(){ renderDep(); renderPos(); }
+
+document.getElementById("poolSeg").addEventListener("click",function(e){ var b=e.target.closest("[data-pool]"); if(!b) return; pool=b.getAttribute("data-pool"); term=30; renderDep(); });
+document.getElementById("rates").addEventListener("click",function(e){ var r=e.target.closest("[data-term]"); if(!r) return; term=parseInt(r.getAttribute("data-term"),10); renderDep(); });
+document.getElementById("term").addEventListener("change",function(){ term=parseInt(this.value,10); renderDep(); });
+document.getElementById("amt").addEventListener("input",function(){ amtTouched[pool]=true; renderDep(); });
+document.getElementById("start").addEventListener("click",function(){ toast("Для создания позиции нужен подключенный смарт-контракт пула."); });
+document.getElementById("posList").addEventListener("click",function(e){ var b=e.target.closest("[data-del]"); if(!b) return; var id=parseInt(b.getAttribute("data-del"),10); S.pos=S.pos.filter(function(x){return x.id!==id;}); save(); render(); });
+document.querySelector("nav").addEventListener("click",function(e){
+  var b=e.target.closest("[data-tab]"); if(!b) return; var t=b.getAttribute("data-tab");
+  document.getElementById("tab-dep").hidden=(t!=="dep"); document.getElementById("tab-pos").hidden=(t!=="pos");
+  document.querySelectorAll("nav button").forEach(function(n){ n.setAttribute("aria-selected",String(n===b)); }); window.scrollTo(0,0);
+});
+var connectedProvider=null;
+function shortAddress(a){return a.slice(0,6)+"…"+a.slice(-4)}
+function findWallet(k){var r=window.ethereum,ps=r&&Array.isArray(r.providers)?r.providers:(r?[r]:[]);return ps.find(function(p){return k==="metamask"?(p.isMetaMask&&!p.isTrust&&!p.isTrustWallet):(p.isTrust||p.isTrustWallet)})||null}
+function showWallet(a){document.getElementById("walletStatus").textContent=a?shortAddress(a):"Не подключен";document.getElementById("walletActions").hidden=!!a;document.getElementById("walletDisconnect").hidden=!a;document.getElementById("walletHint").textContent=a?"Кошелек подключен. Подписание транзакций пока недоступно.":"В Telegram Mini App откройте приложение во встроенном браузере выбранного кошелька."}
+async function connectWallet(k){var p=findWallet(k);if(!p){toast("Кошелек не найден. Откройте Mini App в браузере кошелька.");return}try{var a=await p.request({method:"eth_requestAccounts"});if(!a||!a.length){toast("Кошелек не вернул адрес.");return}connectedProvider=p;showWallet(a[0]);p.on&&p.on("accountsChanged",function(next){showWallet(next&&next[0]||"")});toast("Кошелек подключен")}catch(e){toast(e&&e.code===4001?"Подключение отменено":"Не удалось подключить кошелек")}}
+document.getElementById("walletActions").addEventListener("click",function(e){var b=e.target.closest("[data-wallet]");if(b)connectWallet(b.getAttribute("data-wallet"))});
+document.getElementById("walletDisconnect").addEventListener("click",function(){connectedProvider=null;showWallet("")});
+render();
+})();
+</script>
+</body>
+</html>
