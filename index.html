@@ -269,13 +269,15 @@ document.querySelector("nav").addEventListener("click",function(e){
 document.querySelector("#tab-deposit").addEventListener("click",function(e){
   var b=e.target.closest("[data-tab]"); if(b) setTab(b.getAttribute("data-tab"));
 });
-var connectedProvider=null;
+var connectedProvider=null, announcedWalletProviders=Object.create(null);
+window.addEventListener("eip6963:announceProvider",function(e){var d=e.detail;if(d&&d.info&&d.provider&&d.info.rdns) announcedWalletProviders[d.info.rdns.toLowerCase()]=d.provider;});
+window.dispatchEvent(new Event("eip6963:requestProvider"));
 function shortAddress(a){return a.slice(0,6)+"…"+a.slice(-4)}
-function findWallet(k){var r=window.ethereum,ps=r&&Array.isArray(r.providers)?r.providers:(r?[r]:[]);return ps.find(function(p){return k==="metamask"?(p.isMetaMask&&!p.isTrust&&!p.isTrustWallet):(p.isTrust||p.isTrustWallet)})||null}
+function findWallet(k){var rdns=k==="metamask"?"io.metamask":"com.trustwallet.app";if(announcedWalletProviders[rdns])return announcedWalletProviders[rdns];var r=window.ethereum,ps=r&&Array.isArray(r.providers)?r.providers:(r?[r]:[]);return ps.find(function(p){if(k==="metamask")return p.isMetaMask===true&&!p.isTrust&&!p.isTrustWallet&&!p.isBinance&&!p.isBinanceWallet;return p.isTrust===true||p.isTrustWallet===true})||null}
 function showWallet(a){document.getElementById("walletStatus").textContent=a?shortAddress(a):"Не подключен";document.getElementById("walletActions").hidden=!!a;document.getElementById("walletDisconnect").hidden=!a;document.getElementById("walletHint").textContent=a?"Кошелек подключен. Подписание транзакций пока недоступно.":"Откройте эту страницу в браузере MetaMask или Trust Wallet. Подключение только показывает адрес и не отправляет средства."}
 var inTelegramMiniApp=!!(tg&&tg.initData);
 if(inTelegramMiniApp){document.getElementById("walletActions").hidden=true;document.getElementById("walletStatus").textContent="Только вне Telegram";document.getElementById("walletHint").textContent="Скопируйте адрес сайта и откройте его в браузере MetaMask или Trust Wallet. Здесь кошелёк не подключается."}
-async function connectWallet(k){if(inTelegramMiniApp){toast("Откройте сайт в браузере MetaMask или Trust Wallet.");return}var p=findWallet(k);if(!p){toast("Кошелек не найден. Откройте страницу в браузере кошелька.");return}try{var a=await p.request({method:"eth_requestAccounts"});if(!a||!a.length){toast("Кошелек не вернул адрес.");return}connectedProvider=p;showWallet(a[0]);p.on&&p.on("accountsChanged",function(next){showWallet(next&&next[0]||"")});toast("Кошелек подключен")}catch(e){toast(e&&e.code===4001?"Подключение отменено":"Не удалось подключить кошелек")}}
+async function connectWallet(k){if(inTelegramMiniApp){toast("Откройте сайт в браузере MetaMask или Trust Wallet.");return}window.dispatchEvent(new Event("eip6963:requestProvider"));await new Promise(function(resolve){setTimeout(resolve,200)});var p=findWallet(k);if(!p){toast(k==="metamask"?"MetaMask не найден в этом браузере.":"Trust Wallet не найден в этом браузере.");return}try{var a=await p.request({method:"eth_requestAccounts"});if(!a||!a.length){toast("Кошелек не вернул адрес.");return}connectedProvider=p;showWallet(a[0]);p.on&&p.on("accountsChanged",function(next){showWallet(next&&next[0]||"")});toast("Кошелек подключен")}catch(e){toast(e&&e.code===4001?"Подключение отменено":"Не удалось подключить кошелек")}}
 document.getElementById("walletActions").addEventListener("click",function(e){var b=e.target.closest("[data-wallet]");if(b)connectWallet(b.getAttribute("data-wallet"))});
 document.getElementById("walletDisconnect").addEventListener("click",function(){connectedProvider=null;showWallet("")});
 render();
