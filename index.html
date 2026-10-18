@@ -76,7 +76,7 @@ h2{font-size:13px;margin:22px 0 8px;font-weight:600;text-transform:uppercase;let
 .empty{padding:22px 8px;text-align:center;color:var(--hint)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(124px + max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px)));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13px;z-index:20;max-width:calc(100% - 32px)}
 .dash-card{padding:8px 10px}.dash-card .grid3{gap:6px;margin-top:6px!important}.dash-card .kpi{padding:6px 8px}.dash-card .kpi .t{font-size:10.5px;letter-spacing:.02em}.dash-card .kpi .s{font-size:10.5px}
-nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(2,1fr);background:var(--card);border-top:1px solid var(--line);
+nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border-top:1px solid var(--line);
   padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px));z-index:5}
 nav button{background:none;border:0;padding:8px 2px;font-size:13px;color:var(--hint);cursor:pointer;border-radius:8px;min-height:44px}
 nav button[aria-selected="true"]{color:var(--accent);font-weight:650}
@@ -113,6 +113,17 @@ nav button[aria-selected="true"]{color:var(--accent);font-weight:650}
     <div id="dash" class="stack"></div>
   </section>
 
+  <section id="tab-deposit" hidden>
+    <h2>Депозит</h2>
+    <div class="card">
+      <div class="small muted">Выбранный пул</div>
+      <b id="depositPool">Stablecoin Pool</b>
+      <div class="field" style="margin-top:12px"><label>Сумма</label><div class="num" id="depositAmount">10 000 USDT/USDC</div></div>
+      <div class="field"><label>Срок</label><div id="depositTerm">30 дней</div></div>
+      <p class="small muted">Пополнение пока недоступно: пул и адрес смарт-контракта ещё не настроены.</p>
+      <button class="btn ghost" type="button" data-tab="dep">Вернуться к расчету</button>
+    </div>
+  </section>
   <section id="tab-pos" hidden>
     <h2>Позиции</h2>
     <div class="stack" id="posList"></div>
@@ -121,6 +132,7 @@ nav button[aria-selected="true"]{color:var(--accent);font-weight:650}
 
 <nav role="tablist" aria-label="Разделы">
   <button role="tab" data-tab="dep" aria-selected="true">Earn</button>
+  <button role="tab" data-tab="deposit" aria-selected="false">Депозит</button>
   <button role="tab" data-tab="pos" aria-selected="false">Позиции</button>
 </nav>
 <div class="toast" id="toast" hidden></div>
@@ -234,12 +246,26 @@ document.getElementById("poolSeg").addEventListener("click",function(e){ var b=e
 document.getElementById("rates").addEventListener("click",function(e){ var r=e.target.closest("[data-term]"); if(!r) return; term=parseInt(r.getAttribute("data-term"),10); renderDep(); });
 document.getElementById("term").addEventListener("change",function(){ term=parseInt(this.value,10); renderDep(); });
 document.getElementById("amt").addEventListener("input",function(){ amtTouched[pool]=true; renderDep(); });
-document.getElementById("start").addEventListener("click",function(){ toast("Для создания позиции нужен подключенный смарт-контракт пула."); });
+function setTab(t){
+  document.getElementById("tab-dep").hidden=(t!=="dep");
+  document.getElementById("tab-deposit").hidden=(t!=="deposit");
+  document.getElementById("tab-pos").hidden=(t!=="pos");
+  document.querySelectorAll("nav [data-tab]").forEach(function(n){n.setAttribute("aria-selected",String(n.getAttribute("data-tab")===t));});
+  window.scrollTo(0,0);
+}
+document.getElementById("start").addEventListener("click",function(){
+  var P=POOLS[pool], amount=num(document.getElementById("amt").value);
+  document.getElementById("depositPool").textContent=P.name;
+  document.getElementById("depositAmount").textContent=fmt(amount,P.dec)+" "+P.unit;
+  document.getElementById("depositTerm").textContent=term+" "+dayWord(term);
+  setTab("deposit");
+});
 document.getElementById("posList").addEventListener("click",function(e){ var b=e.target.closest("[data-del]"); if(!b) return; var id=parseInt(b.getAttribute("data-del"),10); S.pos=S.pos.filter(function(x){return x.id!==id;}); save(); render(); });
 document.querySelector("nav").addEventListener("click",function(e){
-  var b=e.target.closest("[data-tab]"); if(!b) return; var t=b.getAttribute("data-tab");
-  document.getElementById("tab-dep").hidden=(t!=="dep"); document.getElementById("tab-pos").hidden=(t!=="pos");
-  document.querySelectorAll("nav button").forEach(function(n){ n.setAttribute("aria-selected",String(n===b)); }); window.scrollTo(0,0);
+  var b=e.target.closest("[data-tab]"); if(!b) return; setTab(b.getAttribute("data-tab"));
+});
+document.querySelector("#tab-deposit").addEventListener("click",function(e){
+  var b=e.target.closest("[data-tab]"); if(b) setTab(b.getAttribute("data-tab"));
 });
 var connectedProvider=null;
 function shortAddress(a){return a.slice(0,6)+"…"+a.slice(-4)}
